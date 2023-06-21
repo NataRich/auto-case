@@ -98,8 +98,8 @@ func newCase(ctx *cli.Context) error {
     appName := row[appCol - 1]
     resName := row[resCol - 1]
 
-    DebugPrint(fmt.Sprintf("申请人：%s", appName))
-    DebugPrint(fmt.Sprintf("被申请人：%s", resName))
+    log.Printf("申请人：%s\n", appName)
+    log.Printf("被申请人：%s\n", resName)
 
     if err := UpdateNames(appName, resName); err != nil {
       DebugPrint("更新申请人姓名失败，请检查配置文件/数据源后重试")
@@ -118,7 +118,9 @@ func newCase(ctx *cli.Context) error {
       continue
     }
 
+    log.Println("开始发送请求")
     if err := MakeRequestWithRetry(Conf.Case, Conf.Request, Conf.Debug.Fake); err != nil {
+      log.Println("请求失败")
       DebugPrint(fmt.Sprintf("重试了%d次，新建请求仍旧失败，将跳过该行",
                               Conf.Request.Retry))
       LogError(err, Conf.Debug.LogPath)
@@ -144,28 +146,21 @@ func main() {
 
   app := cli.NewApp()
 	app.Usage = "人民法院调解新建案例接口"
-	app.UsageText = "case COMMANDS [ARG...]"
-	app.ArgsUsage = "ArgsUsage"
+	app.UsageText = "case 命令 [参数...]"
+	app.ArgsUsage = "参数使用"
 	app.EnableBashCompletion = true
 	app.HideVersion = true
   app.Commands = []*cli.Command{
     &cli.Command{
       Name: "init",
-      Usage: "Initializes a configuration file",
+      Usage: "初始化一个配置文件config.json",
       UsageText: "case init",
       Action: initCase,
     },
     &cli.Command{
       Name: "new",
-      Usage: "Creates a new case record",
-      UsageText: "case new [OPTIONS...]",
-      Flags: []cli.Flag{
-        &cli.StringFlag{
-          Name:     "output",
-          Aliases:  []string{"o"},
-          Usage:    "Writes response to the given file",
-        },
-      },
+      Usage: "根据配置文件config.json, 创建新的案例",
+      UsageText: "case new [参数...]",
       Action: newCase,
     },
   }

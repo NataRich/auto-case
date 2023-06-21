@@ -152,6 +152,8 @@ func setAppBody(conf *PersonConfig) {
   appBody.Birthday        = conf.Birthday
   appBody.AreaCode        = conf.AreaCode
   appBody.Address         = conf.Address
+
+  log.Println("已成功载入申请人配置")
 }
 
 func setResBody(conf *PersonConfig) {
@@ -165,6 +167,8 @@ func setResBody(conf *PersonConfig) {
   resBody.Nation          = conf.Nation
   resBody.AreaCode        = conf.AreaCode
   resBody.Address         = conf.Address
+
+  log.Println("已成功载入被申请人配置")
 }
 
 func setBody(ca *CaseConfig) {
@@ -188,7 +192,7 @@ func setBody(ca *CaseConfig) {
   caseBody.ApplicantList  = []*ApplicantBody{ appBody }
   caseBody.RespondentList = []*RespondentBody{ resBody }
 
-  DebugPrint(fmt.Sprintf("已成功载入案件配置"))
+  log.Println("已成功载入案件配置")
 }
 
 
@@ -229,25 +233,25 @@ func MakeRequest(body *CaseBody, cookie string, timeout int, fake bool) error {
 
   // 若为伪请求模式，打印所有相关信息
   if fake {
-    DebugPrint(fmt.Sprintf("接口 （POST）: %s", ENDPOINT))
+    log.Printf("接口 （POST）: %s\n", ENDPOINT)
 
-    DebugPrint("请求头：")
+    log.Println("请求头：")
     for name, values := range request.Header {
       for _, value := range values {
-        DebugPrint(fmt.Sprintf("%s: %s", name, value))
+        log.Printf("%s: %s\n", name, value)
       }
     }
 
-    DebugPrint("请求体：")
+    log.Println("请求体：")
     xx, err := json.MarshalIndent(body, "", "  ")
     if err != nil {
       DebugPrint("无法序列化")
       return err
     }
-    DebugPrint(fmt.Sprintf("%s", string(xx)))
+    log.Printf("%s\n", string(xx))
 
-    DebugPrint("请求体（表单格式）：")
-    DebugPrint(fmt.Sprintf("%s", string(s)))
+    log.Println("请求体（表单格式）：")
+    log.Printf("%s\n", string(s))
     return nil
   }
 
@@ -258,7 +262,7 @@ func MakeRequest(body *CaseBody, cookie string, timeout int, fake bool) error {
 
   response, err := client.Do(request)
   if err != nil {
-    DebugPrint(fmt.Sprintf("无法发送请求"))
+    DebugPrint("无法发送请求")
     return err
   }
 
@@ -282,8 +286,8 @@ func MakeRequest(body *CaseBody, cookie string, timeout int, fake bool) error {
     return fmt.Errorf("新建失败，返回码为-1：%s", rbody)
   }
 
-  fmt.Println("新建成功！")
-  fmt.Println(rbody)
+  log.Println("新建成功！")
+  log.Println(rbody)
   return nil
 }
 
@@ -291,10 +295,6 @@ func MakeRequest(body *CaseBody, cookie string, timeout int, fake bool) error {
 func MakeRequestWithRetry(caseConf *CaseConfig, reqConf *RequestConfig, fake bool) error {
   if reqConf == nil {
     return fmt.Errorf("请求配置不能为空")
-  }
-
-  if reqConf.Cookie == "" {
-    return fmt.Errorf("Cookie中的acw_tc参数不能为空（请自行到浏览器登录后复制）")
   }
 
   if caseConf == nil {

@@ -328,7 +328,7 @@ func PreCheck(conf *GlobalConfig) bool {
   }
 
   if ca.SuccessState == "" {
-    log.Println("成功状态为空（允许，但请注意是否符合表单要求）")
+    log.Println("成功状态为空（个别情况下允许）")
     return false
   }
 
@@ -355,8 +355,7 @@ func PreCheck(conf *GlobalConfig) bool {
   }
 
   if ca.AutoCreate == "" {
-    log.Println("是否自动生成调解协议不得为空（是：1；否：0）")
-    return false
+    log.Println("是否自动生成调解协议为空（个别情况下允许）")
   }
 
   if ca.DefaultMediatorId == "" {
@@ -482,7 +481,7 @@ func PersonCheck(per *PersonConfig) bool {
   }
 
   if per.IDCardNo == "" {
-    log.Println("当事人身份证号为空（允许，但请检查是否符合需求）")
+    log.Println("当事人身份证号为空（个别情况下允许）")
   }
 
   if per.Sex == "" {
