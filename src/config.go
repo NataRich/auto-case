@@ -243,21 +243,21 @@ func LoadConf(path string) (*GlobalConfig, error) {
 // 更新当事人姓名
 func UpdateNames(appName string, resName string) error {
   if Conf == nil {
-    return fmt.Errorf("全局配置为空\n")
+    return fmt.Errorf("全局配置为空")
   }
 
   if Conf.Case == nil {
-    return fmt.Errorf("案件配置为空\n")
+    return fmt.Errorf("案件配置为空")
   }
 
   if Conf.Case.DefaultApplicant == nil {
-    return fmt.Errorf("默认申请人为空\n")
+    return fmt.Errorf("默认申请人为空")
   } else {
     Conf.Case.DefaultApplicant.Name = appName
   }
 
   if Conf.Case.DefaultRespondent == nil {
-    return fmt.Errorf("默认被申请人为空\n")
+    return fmt.Errorf("默认被申请人为空")
   } else {
     Conf.Case.DefaultRespondent.Name = resName
   }
@@ -268,7 +268,7 @@ func UpdateNames(appName string, resName string) error {
 // 保存配置到文件
 func SaveConf(path string) error {
   if Conf == nil {
-    return fmt.Errorf("没有加载配置，无法保存\n")
+    return fmt.Errorf("没有加载配置，无法保存")
   }
 
   data, err := json.MarshalIndent(Conf, "", "  ")
@@ -516,6 +516,6 @@ func PersonCheck(per *PersonConfig) bool {
 // debug 打印
 func DebugPrint(msg string) {
   if Conf != nil && Conf.Debug.Verbose {
-    fmt.Println(msg)
+    log.Println(msg)
   }
 }

@@ -56,9 +56,7 @@ func newCase(ctx *cli.Context) error {
   }
 
   baseLine += Conf.Data.SkipLines
-  DebugPrint(fmt.Sprintf("跳过excel表（%s）的前%d行\n", 
-                          Conf.Data.Path, 
-                          Conf.Data.SkipLines))
+  DebugPrint(fmt.Sprintf("跳过excel表的前%d行（%s）", Conf.Data.SkipLines, Conf.Data.Path))
 
   count := Conf.Data.ExecCount
   for rows.Next() {
@@ -70,20 +68,20 @@ func newCase(ctx *cli.Context) error {
 
     InsertRandomDates(Conf.Case)
 
-    DebugPrint(fmt.Sprintf("正在抓取excel表（%s）的第%d行数据\n", 
-                            Conf.Data.Path, 
-                            baseLine + Conf.Data.ExecCount - count))
+    DebugPrint(fmt.Sprintf("正在抓取excel表的第%d行数据（%s）", 
+                            baseLine + Conf.Data.ExecCount - count,
+                            Conf.Data.Path))
 
     row, err := rows.Columns()
     if err != nil {
-      DebugPrint(fmt.Sprintf("无法获取该行内容，将跳过该行\n"))
+      DebugPrint("无法获取该行内容，将跳过该行")
       LogError(err, Conf.Debug.LogPath)
       continue
     }
 
     appCol, err := excelize.ColumnNameToNumber(Conf.Data.ApplicantCol)
     if err != nil {
-      DebugPrint(fmt.Sprintf("无法获取该行%s列名对应的索引，将跳过该行\n", 
+      DebugPrint(fmt.Sprintf("无法获取该行%s列名对应的索引，将跳过该行", 
                               Conf.Data.ApplicantCol))
       LogError(err, Conf.Debug.LogPath)
       continue
@@ -91,7 +89,7 @@ func newCase(ctx *cli.Context) error {
 
     resCol, err := excelize.ColumnNameToNumber(Conf.Data.RespondentCol)
     if err != nil {
-      DebugPrint(fmt.Sprintf("无法获取该行%s列名对应的索引，将跳过该行\n", 
+      DebugPrint(fmt.Sprintf("无法获取该行%s列名对应的索引，将跳过该行", 
                               Conf.Data.RespondentCol))
       LogError(err, Conf.Debug.LogPath)
       continue
@@ -100,28 +98,28 @@ func newCase(ctx *cli.Context) error {
     appName := row[appCol - 1]
     resName := row[resCol - 1]
 
-    DebugPrint(fmt.Sprintf("申请人：%s\n", appName))
-    DebugPrint(fmt.Sprintf("被申请人：%s\n", resName))
+    DebugPrint(fmt.Sprintf("申请人：%s", appName))
+    DebugPrint(fmt.Sprintf("被申请人：%s", resName))
 
     if err := UpdateNames(appName, resName); err != nil {
-      DebugPrint(fmt.Sprintf("更新申请人姓名失败，请检查配置文件/数据源后重试\n"))
-      DebugPrint(fmt.Sprintf("%v\n", err.Error()))
+      DebugPrint("更新申请人姓名失败，请检查配置文件/数据源后重试")
+      DebugPrint(fmt.Sprintf("%v", err.Error()))
       LogError(err, Conf.Debug.LogPath)
       return err
     }
 
     if !PersonCheck(Conf.Case.DefaultApplicant) {
-      DebugPrint(fmt.Sprintf("申请人信息检查失败，将跳过该行\n"))
+      DebugPrint("申请人信息检查失败，将跳过该行")
       continue
     }
 
     if !PersonCheck(Conf.Case.DefaultRespondent) {
-      DebugPrint(fmt.Sprintf("申请人信息检查失败，将跳过该行\n"))
+      DebugPrint("申请人信息检查失败，将跳过该行")
       continue
     }
 
-    if err := MakeRequestWithRetry(Conf.Case, Conf.Request, Conf.Debug); err != nil {
-      DebugPrint(fmt.Sprintf("重试了%d次，新建请求仍旧失败，将跳过该行\n",
+    if err := MakeRequestWithRetry(Conf.Case, Conf.Request, Conf.Debug.Fake); err != nil {
+      DebugPrint(fmt.Sprintf("重试了%d次，新建请求仍旧失败，将跳过该行",
                               Conf.Request.Retry))
       LogError(err, Conf.Debug.LogPath)
     }

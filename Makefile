@@ -1,7 +1,9 @@
+SRC_DIR := $(abspath ./src)
+
 all: case
 
 case:
-		go build -o case main.go common.go config.go request.go
+		cd ${SRC_DIR} && go build -o ../case main.go common.go config.go request.go
 
 .PHONY: clean
 clean:

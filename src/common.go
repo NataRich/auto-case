@@ -25,8 +25,8 @@ func InsertRandomDates(conf *CaseConfig) {
   conf.StartTime = DeltaDayStr(endDelta + delta, now)
   conf.EndTime = DeltaDayStr(endDelta, now)
 
-  DebugPrint(fmt.Sprintf("起始时间为：%s\n", conf.StartTime))
-  DebugPrint(fmt.Sprintf("结束时间为：%s\n", conf.EndTime))
+  DebugPrint(fmt.Sprintf("起始时间为：%s", conf.StartTime))
+  DebugPrint(fmt.Sprintf("结束时间为：%s", conf.EndTime))
 }
 
 func LogError(err error, path string) {

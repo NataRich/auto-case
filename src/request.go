@@ -70,13 +70,13 @@ type CaseBody struct {
   DocList []string        `json:"docList"`
   NoteList []string       `json:"noteList"`
 
-  ApplicantList  []ApplicantBody  `json:"applicantPartyList"`
-  RespondentList []RespondentBody `json:"respondentPartyList"`
+  ApplicantList  []*ApplicantBody  `json:"applicantPartyList"`
+  RespondentList []*RespondentBody `json:"respondentPartyList"`
 
   Evidences []string      `json:"evidences"`
 }
 
-var appBody = ApplicantBody{
+var appBody = &ApplicantBody{
   Type:             "",
   Name:             "",
   Tel:              "",
@@ -93,7 +93,7 @@ var appBody = ApplicantBody{
   FileList:         []string{},
 }
 
-var resBody = RespondentBody{
+var resBody = &RespondentBody{
   Type:             "",
   Name:             "",
   Tel:              "",
@@ -134,8 +134,8 @@ var caseBody = &CaseBody{
   DocList:          []string{},
   NoteList:         []string{},
 
-  ApplicantList:    []ApplicantBody{},
-  RespondentList:   []RespondentBody{},
+  ApplicantList:    []*ApplicantBody{},
+  RespondentList:   []*RespondentBody{},
 
   Evidences:        []string{},
 }
@@ -185,18 +185,22 @@ func setBody(ca *CaseConfig) {
   setAppBody(ca.DefaultApplicant)
   setResBody(ca.DefaultRespondent)
 
-  DebugPrint(fmt.Sprintf("已成功载入案件配置\n"))
+  caseBody.ApplicantList  = []*ApplicantBody{ appBody }
+  caseBody.RespondentList = []*RespondentBody{ resBody }
+
+  DebugPrint(fmt.Sprintf("已成功载入案件配置"))
 }
 
 
-func MakeRequest(body *CaseBody, reqConf *RequestConfig, debugConf *DebugConfig) error {
-  client := http.Client{
-    Timeout: time.Duration(reqConf.Timeout) * time.Second,
+func MakeRequest(body *CaseBody, cookie string, timeout int, fake bool) error {
+  if body == nil || cookie == "" || timeout < 0 {
+    return fmt.Errorf("MakeRequest()参数错误")
   }
 
+  // body序列化
   s, err := json.Marshal(body)
   if err != nil {
-    DebugPrint("请求时，序列化错误\n")
+    DebugPrint("请求时，序列化错误")
     return err
   }
 
@@ -207,7 +211,7 @@ func MakeRequest(body *CaseBody, reqConf *RequestConfig, debugConf *DebugConfig)
 
   request, err := http.NewRequest("POST", ENDPOINT, strings.NewReader(form.Encode()))
   if err != nil {
-    DebugPrint("请求时，请求创建错误\n")
+    DebugPrint("请求时，请求创建错误")
     return err
   }
 
@@ -216,44 +220,51 @@ func MakeRequest(body *CaseBody, reqConf *RequestConfig, debugConf *DebugConfig)
   request.Header.Add("Accept-Encoding", "gzip, deflate, br")
   request.Header.Add("Connection", "keep-alive")
   request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-  request.Header.Add("Cookie", reqConf.Cookie)
+  request.Header.Add("Cookie", cookie)
   request.Header.Add("Host", "tiaojie.court.gov.cn")
   request.Header.Add("Origin", "http://tiaojie.court.gov.cn")
   request.Header.Add("Referer", "http://tiaojie.court.gov.cn/fayuan/offline/toAddOffline")
   request.Header.Add("X-Requested-With", "XMLHttpRequest")
   request.Header.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/114.0")
 
-  // 若为为请求模式，打印所有相关信息
-  if debugConf.Fake {
-    DebugPrint(fmt.Sprintf("接口 （POST）: %s\n", ENDPOINT))
+  // 若为伪请求模式，打印所有相关信息
+  if fake {
+    DebugPrint(fmt.Sprintf("接口 （POST）: %s", ENDPOINT))
 
+    DebugPrint("请求头：")
     for name, values := range request.Header {
       for _, value := range values {
-        DebugPrint(fmt.Sprintf("%s: %s\n", name, value))
+        DebugPrint(fmt.Sprintf("%s: %s", name, value))
       }
     }
 
-    DebugPrint("请求体：\n")
+    DebugPrint("请求体：")
     xx, err := json.MarshalIndent(body, "", "  ")
     if err != nil {
-      DebugPrint("无法序列化\n")
+      DebugPrint("无法序列化")
+      return err
     }
+    DebugPrint(fmt.Sprintf("%s", string(xx)))
 
-    DebugPrint(fmt.Sprintf("%s\n", string(xx)))
-
+    DebugPrint("请求体（表单格式）：")
+    DebugPrint(fmt.Sprintf("%s", string(s)))
     return nil
   }
 
   // 否则，发送真实请求
+  client := http.Client{
+    Timeout: time.Duration(timeout) * time.Second,
+  }
+
   response, err := client.Do(request)
   if err != nil {
-    DebugPrint(fmt.Sprintf("无法发送请求\n"))
+    DebugPrint(fmt.Sprintf("无法发送请求"))
     return err
   }
 
   // 判断返回体
   if response.StatusCode != 200 {
-    return fmt.Errorf("新建失败，返回值：%d\n", response.StatusCode)
+    return fmt.Errorf("新建失败，返回值：%d", response.StatusCode)
   }
 
   defer response.Body.Close()
@@ -268,52 +279,53 @@ func MakeRequest(body *CaseBody, reqConf *RequestConfig, debugConf *DebugConfig)
   } 
 
   if strings.Contains(rbody, "-1") {
-    return fmt.Errorf("新建失败，返回码为-1：%s\n", rbody)
+    return fmt.Errorf("新建失败，返回码为-1：%s", rbody)
   }
 
   fmt.Println("新建成功！")
   fmt.Println(rbody)
-  
   return nil
 }
 
 
-func MakeRequestWithRetry(caseConf *CaseConfig, reqConf *RequestConfig, debugConf *DebugConfig) error {
+func MakeRequestWithRetry(caseConf *CaseConfig, reqConf *RequestConfig, fake bool) error {
   if reqConf == nil {
-    return fmt.Errorf("请求配置不能为空\n")
+    return fmt.Errorf("请求配置不能为空")
   }
 
   if reqConf.Cookie == "" {
-    return fmt.Errorf("Cookie中的acw_tc参数不能为空（请自行到浏览器登录后复制）\n")
+    return fmt.Errorf("Cookie中的acw_tc参数不能为空（请自行到浏览器登录后复制）")
   }
 
   if caseConf == nil {
-    return fmt.Errorf("案件配置不能为空\n")
+    return fmt.Errorf("案件配置不能为空")
   }
 
   // 加载默认参数
   setBody(caseConf)
-
   
   // 发送请求
-  if err := MakeRequest(caseBody, reqConf, debugConf); err != nil {
-    DebugPrint(fmt.Sprintf("首次请求失败，即将重试（预计重试%d次）\n", 
+  if err := MakeRequest(caseBody, reqConf.Cookie, reqConf.Timeout, fake); err != nil {
+    DebugPrint(fmt.Sprintf("首次请求失败，即将重试（预计重试%d次）", 
                             reqConf.Retry))
 
     var err error
     for i := 0; i < reqConf.Retry; i++ {
       time.Sleep(time.Duration(reqConf.Delay) * time.Second)
-      DebugPrint(fmt.Sprintf("已等待%d秒，再次尝试\n", reqConf.Delay))
+      DebugPrint(fmt.Sprintf("已等待%d秒，再次尝试", reqConf.Delay))
 
-      err = MakeRequest(caseBody, reqConf, debugConf)
+      err = MakeRequest(caseBody, reqConf.Cookie, reqConf.Timeout, fake)
       if err != nil {
-        DebugPrint(fmt.Sprintf("第%d次重试失败\n", i + 1))
+        DebugPrint(fmt.Sprintf("第%d次重试失败", i + 1))
       }
     }
 
     if err != nil {
       return err
     }
+  } else {
+    time.Sleep(time.Duration(reqConf.Delay) * time.Second)
+    DebugPrint("休息一下...\n")
   }
 
   return nil
